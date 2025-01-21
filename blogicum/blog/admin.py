@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUser_Admin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 
-from .models import Category, Location, Post
+from .models import Category, Comment, Location, Post
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
@@ -66,3 +66,14 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = ('title', 'text')
     list_filter = ('is_published', 'location', 'category')
     list_display_links = ('title',)
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'author',
+        'text',
+        'created_at',
+        'post'
+    )
+    list_filter = ('author', 'created_at')

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 import blog.constants as cnsts
-from core.models import AbstractIsPublishedCreatedAt
+from core.models import AbstractCreatedAt, AbstractIsPublishedCreatedAt
 
 User = get_user_model()
 
@@ -75,7 +75,7 @@ class Post(AbstractIsPublishedCreatedAt):
         null=True
     )
 
-    class Meta:
+    class Meta(AbstractIsPublishedCreatedAt.Meta):
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
 
@@ -83,17 +83,19 @@ class Post(AbstractIsPublishedCreatedAt):
         return self.title[:cnsts.MAX_STR_LENGTH]
 
 
-class Comment(models.Model):
+class Comment(AbstractCreatedAt):
     text = models.TextField('Комментарий')
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         related_name='comments',
+        verbose_name='Публикация'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    class Meta:
+    class Meta(AbstractCreatedAt.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ('created_at',)
+
+    def __str__(self):
+        return self.text[:cnsts.MAX_STR_LENGTH]
