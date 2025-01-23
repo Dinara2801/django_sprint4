@@ -18,4 +18,3 @@ class AbstractIsPublishedCreatedAt(AbstractCreatedAt):
 
     class Meta:
         abstract = True
-        ordering = ('-pub_date',)

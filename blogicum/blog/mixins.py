@@ -1,6 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse
 
 from .forms import CommentForm, PostForm
 from .models import Post, Comment
@@ -11,11 +11,6 @@ class OnlyAuthorMixin(UserPassesTestMixin):
     def test_func(self):
         return self.request.user == self.get_object().author
 
-    def handle_no_permission(self):
-        return redirect(
-            reverse_lazy('blog:post_detail', args=[self.get_object().id])
-        )
-
 
 class PostMixin(OnlyAuthorMixin, LoginRequiredMixin):
     model = Post
@@ -25,17 +20,22 @@ class PostMixin(OnlyAuthorMixin, LoginRequiredMixin):
 
     def handle_no_permission(self):
         return redirect(
-            reverse_lazy('blog:post_detail', args=[self.get_object().id])
+            reverse(
+                'blog:post_detail',
+                kwargs={self.pk_url_kwarg: self.get_object().id}
+            )
         )
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        post = self.get_object()
+        context['form'] = self.form_class(instance=post)
         return context
 
 
@@ -46,7 +46,7 @@ class CommentMixin(LoginRequiredMixin):
     pk_url_kwarg = 'comment_id'
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
             kwargs={'post_id': self.kwargs['post_id']}
         )

@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import (
     CreateView,
@@ -26,10 +26,14 @@ import blog.constants as cnsts
 User = get_user_model()
 
 
-def get_posts(posts):
-    return posts.annotate(
+def annotate_comment_count(posts):
+    return posts.select_related(
+        'author',
+        'category',
+        'location'
+    ).annotate(
         comment_count=Count('comments')
-    )
+    ).order_by('-pub_date')
 
 
 def filtered_posts_by_publication(posts):
@@ -45,12 +49,8 @@ class PostsHomepageView(ListView):
     template_name = 'blog/index.html'
     paginate_by = cnsts.NUM_OF_POSTS
     queryset = filtered_posts_by_publication(
-        get_posts(
-            Post.objects.all().select_related(
-                'author',
-                'category',
-                'location'
-            )
+        annotate_comment_count(
+            Post.objects.all()
         )
     ).order_by(*Post._meta.ordering)
 
@@ -58,8 +58,7 @@ class PostsHomepageView(ListView):
 class PostDetailView(ListView):
     model = Comment
     template_name = 'blog/detail.html'
-    context_object_name = 'comments'
-    paginate_by = 10
+    paginate_by = cnsts.NUM_OF_POSTS
 
     def get_post(self):
         post = get_object_or_404(Post, pk=self.kwargs['post_id'])
@@ -71,9 +70,7 @@ class PostDetailView(ListView):
         )
 
     def get_queryset(self):
-        return self.get_post().comments.all().select_related(
-            'author'
-        ).order_by(*Comment._meta.ordering)
+        return self.get_post().comments.all().order_by(*Comment._meta.ordering)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -96,16 +93,10 @@ class CategoryPostsView(ListView):
 
     def get_queryset(self):
         return filtered_posts_by_publication(
-            get_posts(
-                Post.objects.all().select_related(
-                    'author',
-                    'category',
-                    'location'
-                )
+            annotate_comment_count(
+                self.get_category().posts.all()
             )
-        ).filter(
-            category=self.get_category()
-        ).order_by(*Post._meta.ordering)
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -125,12 +116,12 @@ class ProfileView(ListView):
         )
 
     def get_queryset(self):
-        author_posts = get_posts(
+        posts = annotate_comment_count(
             self.get_author().posts.all()
-        ).order_by(*Post._meta.ordering)
+        )
         if self.get_author() != self.request.user:
-            return filtered_posts_by_publication(author_posts)
-        return author_posts
+            posts = filtered_posts_by_publication(posts)
+        return posts
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -146,7 +137,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )
@@ -162,7 +153,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )
@@ -171,9 +162,9 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 class PostUpdateView(PostMixin, UpdateView):
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
-            kwargs={'post_id': self.kwargs['post_id']}
+            kwargs={self.pk_url_kwarg: self.object.id}
         )
 
 
