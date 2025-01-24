@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUser_Admin
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
+from django.utils.safestring import mark_safe
 
 from .models import Category, Comment, Location, Post
 
@@ -53,6 +54,8 @@ class PostAdmin(admin.ModelAdmin):
     list_display = (
         'title',
         'text',
+        'image',
+        'image_preview',
         'is_published',
         'pub_date',
         'location',
@@ -63,9 +66,19 @@ class PostAdmin(admin.ModelAdmin):
         'location',
         'category'
     )
+    readonly_fields = ["image_preview"]
     search_fields = ('title', 'text')
     list_filter = ('is_published', 'location', 'category')
     list_display_links = ('title',)
+
+    def image_preview(self, obj):
+        if obj.image:
+            return mark_safe(
+                f'<img src="{obj.image.url}" width="180" height="160">'
+            )
+        return "Изображение отсутствует"
+
+    image_preview.short_description = "Просмотр изображения"
 
 
 @admin.register(Comment)

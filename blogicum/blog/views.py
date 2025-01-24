@@ -52,7 +52,7 @@ class PostsHomepageView(ListView):
         annotate_comment_count(
             Post.objects.all()
         )
-    ).order_by(*Post._meta.ordering)
+    )
 
 
 class PostDetailView(ListView):
@@ -70,7 +70,7 @@ class PostDetailView(ListView):
         )
 
     def get_queryset(self):
-        return self.get_post().comments.all().order_by(*Comment._meta.ordering)
+        return self.get_post().comments.all().select_related('author')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -162,9 +162,10 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 class PostUpdateView(PostMixin, UpdateView):
 
     def get_success_url(self):
+        post_id = self.kwargs[self.pk_url_kwarg]
         return reverse(
             'blog:post_detail',
-            kwargs={self.pk_url_kwarg: self.object.id}
+            kwargs={self.pk_url_kwarg: post_id}
         )
 
 

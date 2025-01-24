@@ -19,10 +19,11 @@ class PostMixin(OnlyAuthorMixin, LoginRequiredMixin):
     pk_url_kwarg = 'post_id'
 
     def handle_no_permission(self):
+        post_id = self.kwargs[self.pk_url_kwarg]
         return redirect(
             reverse(
                 'blog:post_detail',
-                kwargs={self.pk_url_kwarg: self.get_object().id}
+                kwargs={self.pk_url_kwarg: post_id}
             )
         )
 
