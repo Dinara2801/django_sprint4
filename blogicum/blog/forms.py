@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django import forms
 
 from .models import Post, Comment
@@ -13,6 +15,11 @@ class PostForm(forms.ModelForm):
                 format='%Y-%m-%dT%H:%M',
             )
         }
+
+    def __init__(self, *args, **kwargs):
+        super(PostForm, self).__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields['pub_date'].initial = datetime.now()
 
 
 class CommentForm(forms.ModelForm):
